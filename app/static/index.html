@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>embr-foundry · chat</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 0; padding: 1.5rem;
+      max-width: 860px; margin-inline: auto;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+    .sub { color: #888; font-size: 0.85rem; margin-bottom: 1rem; }
+    #transcript {
+      border: 1px solid #8884; border-radius: 8px;
+      padding: 0.75rem; height: 360px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 0.5rem;
+      background: #8881;
+    }
+    .msg { padding: 0.5rem 0.75rem; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; }
+    .msg.user { align-self: flex-end; background: #2563eb22; }
+    .msg.assistant { align-self: flex-start; background: #16a34a22; }
+    .msg.error { align-self: stretch; background: #dc262622; color: #b91c1c; }
+    .role { font-size: 0.7rem; text-transform: uppercase; opacity: 0.6; }
+    form { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    input[type=text] { flex: 1; padding: 0.6rem; border-radius: 8px; border: 1px solid #8886; }
+    button { padding: 0.6rem 1rem; border-radius: 8px; border: 0; background: #2563eb; color: #fff; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    details { margin-top: 1.5rem; border: 1px solid #8884; border-radius: 8px; padding: 0.5rem 0.75rem; }
+    summary { cursor: pointer; font-weight: 600; }
+    .warn { color: #b45309; font-size: 0.8rem; margin: 0.5rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    td { border-bottom: 1px solid #8883; padding: 0.25rem 0.4rem; vertical-align: top; word-break: break-all; }
+    td.k { font-weight: 600; width: 30%; }
+  </style>
+</head>
+<body>
+  <h1>embr-foundry</h1>
+  <div class="sub">Backend: <span id="backend">…</span></div>
+
+  <div id="transcript"></div>
+
+  <form id="chat-form">
+    <input id="message" type="text" placeholder="Say something…" autocomplete="off" required />
+    <button id="send" type="submit">Send</button>
+  </form>
+
+  <details>
+    <summary>Environment variables (<span id="env-count">0</span>)</summary>
+    <p class="warn">⚠ All env vars are shown for PaaS injection testing only — never enable this in production.</p>
+    <table id="env-table"><tbody></tbody></table>
+  </details>
+
+  <script>
+    const transcript = document.getElementById("transcript");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("message");
+    const sendBtn = document.getElementById("send");
+    const history = [];
+
+    function addMsg(role, content) {
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      const r = document.createElement("div");
+      r.className = "role";
+      r.textContent = role;
+      const c = document.createElement("div");
+      c.textContent = content;
+      div.append(r, c);
+      transcript.append(div);
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      addMsg("user", text);
+      input.value = "";
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, history }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          addMsg("error", data.error || ("Request failed: " + res.status));
+        } else {
+          addMsg("assistant", data.reply);
+          history.push({ role: "user", content: text });
+          history.push({ role: "assistant", content: data.reply });
+        }
+      } catch (err) {
+        addMsg("error", String(err));
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    });
+
+    async function loadEnv() {
+      try {
+        const res = await fetch("/api/env");
+        const data = await res.json();
+        document.getElementById("backend").textContent = data.backend;
+        const entries = Object.entries(data.env);
+        document.getElementById("env-count").textContent = entries.length;
+        const tbody = document.querySelector("#env-table tbody");
+        for (const [k, v] of entries) {
+          const tr = document.createElement("tr");
+          const tk = document.createElement("td");
+          tk.className = "k";
+          tk.textContent = k;
+          const tv = document.createElement("td");
+          tv.textContent = v;
+          tr.append(tk, tv);
+          tbody.append(tr);
+        }
+      } catch (err) {
+        document.getElementById("backend").textContent = "(failed to load env)";
+      }
+    }
+
+    loadEnv();
+    input.focus();
+  </script>
+</body>
+</html>
