@@ -1,0 +1,12 @@
+platform: python
+platformVersion: "3.12"
+
+run:
+  port: 8080
+  startCommand: "python -m uvicorn app.main:app --host 0.0.0.0 --port 8080"
+
+healthCheck:
+  path: /health
+  expectedStatusCode: 200
+
+autoDeploy: true

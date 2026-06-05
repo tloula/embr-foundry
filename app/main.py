@@ -59,6 +59,6 @@ def chat(req: ChatRequest) -> JSONResponse:
     return JSONResponse({"reply": reply})
 
 
-@app.get("/healthz")
+@app.get("/health")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}

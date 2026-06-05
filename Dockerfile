@@ -11,7 +11,8 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
 # Install dependencies first (better layer caching).
-COPY pyproject.toml ./
+# README.md is copied because pyproject.toml references it for the build.
+COPY pyproject.toml README.md ./
 RUN uv sync --no-install-project --no-dev
 
 # Copy the application source.
