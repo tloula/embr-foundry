@@ -74,7 +74,7 @@ The container honors a `PORT` env var if the platform injects one (defaults to `
 | GET | `/` | Chat page + env-var dump |
 | GET | `/api/env` | All env vars as JSON (testing only) |
 | POST | `/api/chat` | `{ "message": "...", "history": [...] }` → `{ "reply": "..." }` |
-| GET | `/healthz` | Liveness probe |
+| GET | `/health` | Liveness probe |
 
 ## Architecture / extending to agents
 

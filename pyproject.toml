@@ -5,8 +5,8 @@ description = "Minimal chat app to test PaaS env var injection, with a pluggable
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn>=0.30",
+    "fastapi>=0.115,<0.116",
+    "uvicorn>=0.30,<0.35",
     "azure-ai-inference>=1.0.0b9",
 ]
 
