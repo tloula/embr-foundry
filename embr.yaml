@@ -1,9 +1,13 @@
 platform: python
-platformVersion: "3.12"
+platformVersion: "3.14"
 
 run:
-  port: 8080
-  startCommand: "python -m uvicorn app.main:app --host 0.0.0.0 --port 8080"
+  port: 8000
+  # Oryx activates the build virtualenv (sets PYTHONPATH to its site-packages)
+  # before running this command, so a plain `python -m uvicorn` resolves the
+  # installed deps. This works because the build and runtime Python versions
+  # match (3.14) — embr's runtime images are 3.13/3.14, there is no 3.12.
+  startCommand: "python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
 healthCheck:
   path: /health
