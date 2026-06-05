@@ -94,3 +94,17 @@ No web-layer changes are required.
 `/api/env` and the UI expose **all** environment variable values, including
 secrets. This is intentional for validating platform env-var injection and must
 **never** be enabled in a real environment.
+
+## Troubleshooting: PaaS build fails with `invalid peer certificate: UnknownIssuer`
+
+If a PaaS builder (e.g. Azure Oryx) runs `uv sync` and fails to download wheels
+from `files.pythonhosted.org` with `invalid peer certificate: UnknownIssuer`,
+the build environment is behind a TLS-intercepting proxy whose CA is trusted by
+the OS/pip store but **not** by uv's bundled certificate roots.
+
+This repo sets `native-tls = true` under `[tool.uv]` in `pyproject.toml`, which
+tells uv to use the OS certificate store (matching pip's behavior). Keep that
+setting; without it the build fails on the first uncached wheel. Equivalent
+alternatives if needed: set `UV_NATIVE_TLS=1` in the build environment, or pass
+`uv sync --native-tls`.
+

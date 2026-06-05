@@ -16,3 +16,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[tool.uv]
+# Use the OS/native certificate store instead of uv's bundled cert roots.
+# Required in build environments behind a TLS-intercepting proxy (e.g. Oryx/PaaS),
+# where the proxy CA is trusted by the system store but not by uv's webpki roots,
+# which otherwise causes `invalid peer certificate: UnknownIssuer` on pythonhosted.
+native-tls = true
+
