@@ -15,23 +15,15 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-import httpx
 from openai import OpenAI
 
 Message = dict[str, str]
 
-
-def _http_client() -> httpx.Client | None:
-    """Trust the platform's CA bundle if one is set.
-
-    embr runs behind a TLS-intercepting egress proxy. It points ``requests`` at the
-    proxy CA via ``REQUESTS_CA_BUNDLE``, but the openai SDK uses ``httpx``, which
-    ignores that var and falls back to bundled certifi roots — so without this the
-    TLS handshake fails with a generic "Connection error". ``httpx`` honors
-    ``SSL_CERT_FILE``; fall back to ``REQUESTS_CA_BUNDLE`` for the same file.
-    """
-    ca = os.environ.get("SSL_CERT_FILE") or os.environ.get("REQUESTS_CA_BUNDLE")
-    return httpx.Client(verify=ca) if ca else None
+# embr runs behind a TLS-intercepting egress proxy and points ``requests`` at the
+# proxy CA via ``REQUESTS_CA_BUNDLE``. The openai SDK uses ``httpx``/OpenSSL, which
+# ignore that var but honor ``SSL_CERT_FILE`` — so mirror the bundle into it.
+if not os.environ.get("SSL_CERT_FILE") and os.environ.get("REQUESTS_CA_BUNDLE"):
+    os.environ["SSL_CERT_FILE"] = os.environ["REQUESTS_CA_BUNDLE"]
 
 
 @lru_cache(maxsize=None)
@@ -40,7 +32,7 @@ def _client(prefix: str) -> OpenAI:
     api_key = os.environ.get(f"{prefix}_API_KEY")
     if not endpoint or not api_key:
         raise RuntimeError(f"Missing {prefix}_ENDPOINT and/or {prefix}_API_KEY")
-    return OpenAI(base_url=endpoint, api_key=api_key, http_client=_http_client())
+    return OpenAI(base_url=endpoint, api_key=api_key)
 
 
 def chat(messages: list[Message]) -> str:
