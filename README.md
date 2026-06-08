@@ -25,10 +25,10 @@ Completions backend (`azure-ai-inference`):
 
 | Var | Purpose |
 | --- | --- |
-| `CHAT_AI_ENDPOINT` | Inference endpoint URL |
+| `CHAT_AI_ENDPOINT` | Models inference endpoint URL, ending in `/models` (e.g. `https://<resource>.services.ai.azure.com/models`). Do **not** use the Foundry project endpoint (`.../api/projects/<name>`) here — that's for the agent backend and causes `API version not supported`. |
 | `CHAT_AI_API_KEY` | API key |
 | `CHAT_AI_MODEL` | Model/deployment name |
-| `CHAT_AI_API_VERSION` | Optional. Overrides the SDK default API version (some Foundry endpoints reject the old default) |
+| `CHAT_AI_API_VERSION` | Optional. Overrides the SDK's default API version. Usually unnecessary for the `/models` route (the default works). |
 
 Agent backend (**future, not implemented** — reserved so the platform can inject them now):
 
