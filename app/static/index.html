@@ -36,6 +36,15 @@
     table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
     td { border-bottom: 1px solid #8883; padding: 0.25rem 0.4rem; vertical-align: top; word-break: break-all; }
     td.k { font-weight: 600; width: 30%; }
+    section.embed { margin-top: 1.5rem; border: 1px solid #8884; border-radius: 8px; padding: 0.75rem; }
+    section.embed h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+    section.embed input { margin-bottom: 0.5rem; }
+    #embed-form { flex-wrap: wrap; }
+    #embed-form input[type=text] { flex: 1 1 220px; }
+    #embed-result { font-size: 0.85rem; margin-top: 0.5rem; }
+    #embed-result.err { color: #b91c1c; }
+    #embed-result table { margin-top: 0.25rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   </style>
 </head>
 <body>
@@ -48,6 +57,17 @@
     <input id="message" type="text" placeholder="Say something…" autocomplete="off" required />
     <button id="send" type="submit">Send</button>
   </form>
+
+  <section class="embed">
+    <h2>Text embeddings</h2>
+    <div class="sub">Model: <span id="embed-model">…</span></div>
+    <form id="embed-form">
+      <input id="embed-text" type="text" placeholder="Text to embed…" autocomplete="off" required />
+      <input id="embed-compare" type="text" placeholder="(optional) compare to… → cosine similarity" autocomplete="off" />
+      <button id="embed-btn" type="submit">Embed</button>
+    </form>
+    <div id="embed-result"></div>
+  </section>
 
   <details>
     <summary>Environment variables (<span id="env-count">0</span>)</summary>
@@ -109,6 +129,7 @@
         const res = await fetch("/api/env");
         const data = await res.json();
         document.getElementById("backend").textContent = data.backend;
+        document.getElementById("embed-model").textContent = data.env.EMBED_AI_MODEL || "(unset)";
         const entries = Object.entries(data.env);
         document.getElementById("env-count").textContent = entries.length;
         const tbody = document.querySelector("#env-table tbody");
@@ -129,6 +150,53 @@
 
     loadEnv();
     input.focus();
+
+    const embedForm = document.getElementById("embed-form");
+    const embedText = document.getElementById("embed-text");
+    const embedCompare = document.getElementById("embed-compare");
+    const embedBtn = document.getElementById("embed-btn");
+    const embedResult = document.getElementById("embed-result");
+
+    function row(k, v) {
+      return "<tr><td class=\"k\">" + k + "</td><td>" + v + "</td></tr>";
+    }
+
+    embedForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = embedText.value.trim();
+      if (!text) return;
+      embedBtn.disabled = true;
+      embedResult.className = "";
+      embedResult.textContent = "Embedding…";
+      try {
+        const res = await fetch("/api/embed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, compare: embedCompare.value }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          embedResult.className = "err";
+          embedResult.textContent = data.error || ("Request failed: " + res.status);
+          return;
+        }
+        let html = "<table>";
+        html += row("model", data.model ?? "(unset)");
+        html += row("dimensions", data.dimensions);
+        html += row("L2 norm", data.norm.toFixed(4));
+        html += row("preview", "<code>[" + data.preview.map((n) => n.toFixed(4)).join(", ") + " …]</code>");
+        if ("similarity" in data) {
+          html += row("cosine vs. \"" + data.compareText + "\"", data.similarity.toFixed(4));
+        }
+        html += "</table>";
+        embedResult.innerHTML = html;
+      } catch (err) {
+        embedResult.className = "err";
+        embedResult.textContent = String(err);
+      } finally {
+        embedBtn.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>

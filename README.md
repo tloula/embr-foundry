@@ -3,6 +3,7 @@
 A deliberately minimal Python web app whose primary goal is to **prove environment-variable injection works on a new PaaS platform**. It has:
 
 - A single root page with a simple chat UI backed by an LLM.
+- A text-embeddings panel to validate an embedding model (vector dims + cosine similarity).
 - An env-var dump in the UI (⚠ intentionally insecure — testing only).
 - A pluggable backend design so an Azure AI **agent** backend can be added later without touching the web layer.
 
@@ -29,6 +30,15 @@ Completions backend (`azure-ai-inference`):
 | `CHAT_AI_API_KEY` | API key |
 | `CHAT_AI_MODEL` | Model/deployment name |
 | `CHAT_AI_API_VERSION` | Optional. Overrides the SDK's default API version. Usually unnecessary for the `/models` route (the default works). |
+
+Embeddings (`azure-ai-inference` `EmbeddingsClient`) — powers the **Text embeddings** panel:
+
+| Var | Purpose |
+| --- | --- |
+| `EMBED_AI_ENDPOINT` | Models inference endpoint URL, ending in `/models` (same rule as `CHAT_AI_ENDPOINT`). |
+| `EMBED_AI_API_KEY` | API key |
+| `EMBED_AI_MODEL` | Embedding model/deployment name (e.g. `text-embedding-3-small`) |
+| `EMBED_AI_API_VERSION` | Optional API version override (usually unnecessary). |
 
 Agent backend (**future, not implemented** — reserved so the platform can inject them now):
 
@@ -75,6 +85,7 @@ The container honors a `PORT` env var if the platform injects one (defaults to `
 | GET | `/` | Chat page + env-var dump |
 | GET | `/api/env` | All env vars as JSON (testing only) |
 | POST | `/api/chat` | `{ "message": "...", "history": [...] }` → `{ "reply": "..." }` |
+| POST | `/api/embed` | `{ "text": "...", "compare": "..."? }` → vector `dimensions`, `norm`, `preview`, and `similarity` when `compare` is given |
 | GET | `/health` | Liveness probe |
 
 ## Architecture / extending to agents
