@@ -28,6 +28,21 @@ class BackendError(RuntimeError):
     """
 
 
+def resolve_api_version(endpoint: str | None, override: str | None) -> str | None:
+    """Pick the api-version to pass to an azure-ai-inference client.
+
+    The OpenAI-compatible ``/openai/v1`` route only accepts ``api-version=preview``
+    (the SDK's hard-coded default is rejected with "API version not supported").
+    An explicit override always wins; otherwise ``/openai/v1`` endpoints default
+    to ``preview`` and every other route falls back to the SDK default (``None``).
+    """
+    if override:
+        return override
+    if endpoint and "/openai/v1" in endpoint:
+        return "preview"
+    return None
+
+
 @runtime_checkable
 class ChatBackend(Protocol):
     """Minimal interface every chat backend must implement."""

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 
-from .base import BackendError, Message
+from .base import BackendError, Message, resolve_api_version
 
 
 class ChatCompletionsBackend:
@@ -42,10 +42,10 @@ class ChatCompletionsBackend:
         from azure.ai.inference import ChatCompletionsClient
         from azure.core.credentials import AzureKeyCredential
 
-        # Optional override; if unset the SDK default (an older preview) is used,
-        # which some Foundry endpoints reject with "API version not supported".
+        # The OpenAI-compatible /openai/v1 route requires api-version=preview;
+        # other routes use the SDK default. An explicit override always wins.
         client_kwargs = {}
-        api_version = os.environ.get("CHAT_AI_API_VERSION")
+        api_version = resolve_api_version(endpoint, os.environ.get("CHAT_AI_API_VERSION"))
         if api_version:
             client_kwargs["api_version"] = api_version
 

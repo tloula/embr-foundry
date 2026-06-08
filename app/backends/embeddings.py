@@ -12,39 +12,48 @@ different shape (text in, vectors out) and are selected directly rather than via
 Endpoint routing note: unlike chat completions, Azure OpenAI embedding
 deployments are *not* served by the unified ``/models`` inference route on a
 Foundry/AI Services resource (that route mistranslates the call and returns an
-empty 200). They must be reached via the Azure OpenAI route
-``<resource>/openai/deployments/<deployment>/embeddings``. To keep
-``EMBED_AI_ENDPOINT`` symmetric with ``CHAT_AI_ENDPOINT`` (both pointing at the
-same ``.../models`` base), this backend derives the correct embeddings URL from
-the base endpoint plus the deployment name. A fully-qualified
-``.../openai/deployments/<name>`` endpoint is also accepted as-is.
+empty 200). They must be reached via an Azure OpenAI route. This backend accepts
+whatever shape the platform injects:
+
+  - ``<resource>/openai/v1``                      OpenAI-compatible route (model in
+                                                   body; requires api-version=preview)
+  - ``<resource>/openai/deployments/<name>``      classic AOAI route (model in path)
+  - ``<resource>/models`` or bare resource base   derived to ``/openai/deployments/<model>``
 
 Environment variables:
-  - EMBED_AI_ENDPOINT      resource endpoint (same ``.../models`` base as chat),
-                           or a full ``.../openai/deployments/<name>`` URL
+  - EMBED_AI_ENDPOINT      resource endpoint in any of the shapes above
   - EMBED_AI_API_KEY       API key
   - EMBED_AI_MODEL         embedding deployment name (e.g. text-embedding-3-small)
-  - EMBED_AI_API_VERSION   optional API version override
+  - EMBED_AI_API_VERSION   optional API version override (defaults to ``preview``
+                           for ``/openai/v1`` endpoints)
 """
 
 from __future__ import annotations
 
 import os
 
-from .base import BackendError
+from .base import BackendError, resolve_api_version
 
 
-def _resolve_embeddings_endpoint(raw: str, model: str | None) -> str:
-    """Derive the Azure OpenAI embeddings endpoint from the configured value.
+def _resolve_embeddings_endpoint(raw: str, model: str | None) -> tuple[str, bool]:
+    """Return ``(endpoint, send_model_in_body)`` for the configured value.
 
-    Accepts either the shared ``.../models`` resource base (preferred, symmetric
-    with chat) or a fully-qualified ``.../openai/deployments/<name>`` URL. The
-    SDK appends ``/embeddings`` to whatever endpoint it is given.
+    ``send_model_in_body`` is True only for the OpenAI-compatible ``/openai/v1``
+    route, which identifies the deployment via the request body; the classic
+    ``/openai/deployments/<name>`` routes carry it in the URL path. The SDK
+    appends ``/embeddings`` to whatever endpoint it is given.
     """
     base = raw.rstrip("/")
-    # Already a full deployment path -> use as-is.
+    # OpenAI-compatible v1 route -> deployment is named in the request body.
+    if "/openai/v1" in base:
+        if not model:
+            raise BackendError(
+                "Embeddings backend is not configured. Missing env var: EMBED_AI_MODEL"
+            )
+        return base, True
+    # Already a full classic deployment path -> use as-is (model in path).
     if "/openai/deployments/" in base:
-        return base
+        return base, False
     # Strip the unified inference suffix to get the bare resource base.
     if base.endswith("/models"):
         base = base[: -len("/models")]
@@ -52,7 +61,7 @@ def _resolve_embeddings_endpoint(raw: str, model: str | None) -> str:
         raise BackendError(
             "Embeddings backend is not configured. Missing env var: EMBED_AI_MODEL"
         )
-    return f"{base}/openai/deployments/{model}"
+    return f"{base}/openai/deployments/{model}", False
 
 
 class EmbeddingsBackend:
@@ -62,6 +71,7 @@ class EmbeddingsBackend:
 
     def __init__(self) -> None:
         self._client = None  # built lazily in _get_client()
+        self._send_model_in_body = False
 
     def _get_client(self):
         if self._client is not None:
@@ -85,11 +95,14 @@ class EmbeddingsBackend:
         from azure.core.credentials import AzureKeyCredential
 
         model = os.environ.get("EMBED_AI_MODEL")
-        resolved_endpoint = _resolve_embeddings_endpoint(endpoint, model)
+        resolved_endpoint, self._send_model_in_body = _resolve_embeddings_endpoint(
+            endpoint, model
+        )
 
-        # Optional override; if unset the SDK default api-version is used.
+        # /openai/v1 endpoints require api-version=preview; others use the SDK
+        # default. An explicit EMBED_AI_API_VERSION override always wins.
         client_kwargs = {}
-        api_version = os.environ.get("EMBED_AI_API_VERSION")
+        api_version = resolve_api_version(resolved_endpoint, os.environ.get("EMBED_AI_API_VERSION"))
         if api_version:
             client_kwargs["api_version"] = api_version
 
@@ -102,11 +115,14 @@ class EmbeddingsBackend:
 
     def embed(self, inputs: list[str]) -> list[list[float]]:
         """Return one embedding vector per input string, in input order."""
-        # The deployment is encoded in the resolved endpoint path, so the model
-        # need not be sent in the request body.
         client = self._get_client()
+        # The /openai/v1 route names the deployment in the body; classic routes
+        # carry it in the URL path, so the model kwarg is omitted there.
+        embed_kwargs: dict[str, object] = {"input": inputs}
+        if self._send_model_in_body:
+            embed_kwargs["model"] = os.environ.get("EMBED_AI_MODEL")
         try:
-            response = client.embed(input=inputs)
+            response = client.embed(**embed_kwargs)
         except Exception as exc:  # noqa: BLE001 - surface as readable error
             raise BackendError(f"Embedding request failed: {exc}") from exc
 

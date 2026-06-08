@@ -26,19 +26,19 @@ Completions backend (`azure-ai-inference`):
 
 | Var | Purpose |
 | --- | --- |
-| `CHAT_AI_ENDPOINT` | Models inference endpoint URL, ending in `/models` (e.g. `https://<resource>.services.ai.azure.com/models`). Do **not** use the Foundry project endpoint (`.../api/projects/<name>`) here — that's for the agent backend and causes `API version not supported`. |
+| `CHAT_AI_ENDPOINT` | Inference endpoint URL. Accepts the OpenAI-compatible `/openai/v1` route (e.g. `https://<resource>.services.ai.azure.com/openai/v1`) or the unified `/models` route. Do **not** use the Foundry project endpoint (`.../api/projects/<name>`) here — that's for the agent backend and causes `API version not supported`. |
 | `CHAT_AI_API_KEY` | API key |
 | `CHAT_AI_MODEL` | Model/deployment name |
-| `CHAT_AI_API_VERSION` | Optional. Overrides the SDK's default API version. Usually unnecessary for the `/models` route (the default works). |
+| `CHAT_AI_API_VERSION` | Optional. Overrides the API version. Unnecessary normally: the backend auto-selects `api-version=preview` for `/openai/v1` and the SDK default for `/models`. |
 
 Embeddings (`azure-ai-inference` `EmbeddingsClient`) — powers the **Text embeddings** panel:
 
 | Var | Purpose |
 | --- | --- |
-| `EMBED_AI_ENDPOINT` | Resource endpoint — use the **same** `.../models` base as `CHAT_AI_ENDPOINT`. The backend derives the Azure OpenAI embeddings route (`<resource>/openai/deployments/<model>`) from it, since AOAI embedding deployments aren't served by `/models`. A full `.../openai/deployments/<name>` URL also works. |
+| `EMBED_AI_ENDPOINT` | Same endpoint shapes as `CHAT_AI_ENDPOINT`. The backend routes automatically: `/openai/v1` is used as-is (deployment sent in the body); `/openai/deployments/<name>` is used as-is (deployment in the path); a `/models` (or bare resource) base is derived to `/openai/deployments/<EMBED_AI_MODEL>`, since AOAI embedding deployments aren't served by `/models`. |
 | `EMBED_AI_API_KEY` | API key |
 | `EMBED_AI_MODEL` | Embedding model/deployment name (e.g. `text-embedding-3-small`) |
-| `EMBED_AI_API_VERSION` | Optional API version override (usually unnecessary). |
+| `EMBED_AI_API_VERSION` | Optional API version override (unnecessary; `preview` is auto-selected for `/openai/v1`). |
 
 Agent backend (**future, not implemented** — reserved so the platform can inject them now):
 
@@ -56,7 +56,7 @@ See [`.env.example`](.env.example).
 uv sync
 
 # Provide credentials (PowerShell example)
-$env:CHAT_AI_ENDPOINT="https://your-resource.services.ai.azure.com/models"
+$env:CHAT_AI_ENDPOINT="https://your-resource.services.ai.azure.com/openai/v1"
 $env:CHAT_AI_API_KEY="your-api-key"
 $env:CHAT_AI_MODEL="gpt-4o-mini"
 
