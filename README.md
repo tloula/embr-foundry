@@ -28,6 +28,7 @@ Completions backend (`azure-ai-inference`):
 | `CHAT_AI_ENDPOINT` | Inference endpoint URL |
 | `CHAT_AI_API_KEY` | API key |
 | `CHAT_AI_MODEL` | Model/deployment name |
+| `CHAT_AI_API_VERSION` | Optional. Overrides the SDK default API version (some Foundry endpoints reject the old default) |
 
 Agent backend (**future, not implemented** — reserved so the platform can inject them now):
 

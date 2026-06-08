@@ -42,9 +42,17 @@ class ChatCompletionsBackend:
         from azure.ai.inference import ChatCompletionsClient
         from azure.core.credentials import AzureKeyCredential
 
+        # Optional override; if unset the SDK default (an older preview) is used,
+        # which some Foundry endpoints reject with "API version not supported".
+        client_kwargs = {}
+        api_version = os.environ.get("CHAT_AI_API_VERSION")
+        if api_version:
+            client_kwargs["api_version"] = api_version
+
         self._client = ChatCompletionsClient(
             endpoint=endpoint,
             credential=AzureKeyCredential(api_key),
+            **client_kwargs,
         )
         return self._client
 
