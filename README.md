@@ -5,42 +5,38 @@ A deliberately minimal Python web app whose primary goal is to **prove environme
 - A single root page with a simple chat UI backed by an LLM.
 - A text-embeddings panel to validate an embedding model (vector dims + cosine similarity).
 - An env-var dump in the UI (⚠ intentionally insecure — testing only).
-- A pluggable backend design so an Azure AI **agent** backend can be added later without touching the web layer.
 
 ## Stack
 
 - [uv](https://docs.astral.sh/uv/) for project & dependency management
 - FastAPI + uvicorn
 - Plain HTML + vanilla JS frontend
-- `azure-ai-inference` (`ChatCompletionsClient` + `AzureKeyCredential`)
+- The official [`openai`](https://github.com/openai/openai-python) SDK, pointed at
+  embr's injected OpenAI-compatible Foundry endpoint
 
 ## Environment variables
 
-Backend selection:
+embr injects these from the bound Foundry deployment. The endpoint is the
+OpenAI-compatible route (`.../openai/v1`), used as-is by the `openai` SDK — no
+api-version, no endpoint juggling.
 
-| Var | Default | Purpose |
-| --- | --- | --- |
-| `CHAT_BACKEND` | `completions` | Which backend to use: `completions` or `agent` |
-
-Completions backend (`azure-ai-inference`):
+Chat:
 
 | Var | Purpose |
 | --- | --- |
-| `CHAT_AI_ENDPOINT` | Inference endpoint URL. Accepts the OpenAI-compatible `/openai/v1` route (e.g. `https://<resource>.services.ai.azure.com/openai/v1`) or the unified `/models` route. Do **not** use the Foundry project endpoint (`.../api/projects/<name>`) here — that's for the agent backend and causes `API version not supported`. |
+| `CHAT_AI_ENDPOINT` | OpenAI-compatible endpoint, e.g. `https://<resource>.services.ai.azure.com/openai/v1` |
 | `CHAT_AI_API_KEY` | API key |
 | `CHAT_AI_MODEL` | Model/deployment name |
-| `CHAT_AI_API_VERSION` | Optional. Overrides the API version. Unnecessary normally: the backend auto-selects `api-version=preview` for `/openai/v1` and the SDK default for `/models`. |
 
-Embeddings (`azure-ai-inference` `EmbeddingsClient`) — powers the **Text embeddings** panel:
+Embeddings (powers the **Text embeddings** panel):
 
 | Var | Purpose |
 | --- | --- |
-| `EMBED_AI_ENDPOINT` | Same endpoint shapes as `CHAT_AI_ENDPOINT`. The backend routes automatically: `/openai/v1` is used as-is (deployment sent in the body); `/openai/deployments/<name>` is used as-is (deployment in the path); a `/models` (or bare resource) base is derived to `/openai/deployments/<EMBED_AI_MODEL>`, since AOAI embedding deployments aren't served by `/models`. |
+| `EMBED_AI_ENDPOINT` | Same OpenAI-compatible endpoint shape as `CHAT_AI_ENDPOINT` |
 | `EMBED_AI_API_KEY` | API key |
 | `EMBED_AI_MODEL` | Embedding model/deployment name (e.g. `text-embedding-3-small`) |
-| `EMBED_AI_API_VERSION` | Optional API version override (unnecessary; `preview` is auto-selected for `/openai/v1`). |
 
-Agent backend (**future, not implemented** — reserved so the platform can inject them now):
+Agent backend (**future, not implemented**):
 
 | Var | Purpose |
 | --- | --- |
@@ -90,16 +86,26 @@ The container honors a `PORT` env var if the platform injects one (defaults to `
 
 ## Architecture / extending to agents
 
-The web layer (`app/main.py`) depends only on the `ChatBackend` interface in
-`app/backends/base.py` and resolves a concrete backend via `get_backend()`
-(keyed on `CHAT_BACKEND`). To add the agent backend later:
+`app/ai.py` is a tiny wrapper exposing `chat(messages)` and `embed(inputs)` over
+the `openai` SDK; `app/main.py` is just the FastAPI web layer. To add a Foundry
+**agent** backend later:
 
 1. Add deps: `uv add azure-ai-projects azure-identity`.
-2. Implement `chat()` in `app/backends/agent.py` (a documented stub today) using
-   `AIProjectClient` + `ManagedIdentityCredential`.
-3. Set `CHAT_BACKEND=agent`.
+2. Build the client with a managed identity and fetch the agent, e.g.:
 
-No web-layer changes are required.
+   ```python
+   from azure.ai.projects import AIProjectClient
+   from azure.identity import ManagedIdentityCredential
+
+   project = AIProjectClient(
+       endpoint=os.environ["SUPPORT_AI_ENDPOINT"],
+       credential=ManagedIdentityCredential(client_id=os.environ["SUPPORT_AI_IDENTITY_CLIENT_ID"]),
+   )
+   agent = project.agents.get_agent(agent_id=os.environ["SUPPORT_AI_AGENT_ID"])
+   ```
+
+3. Add a route (or branch `chat`) that drives the agent. The web layer only needs
+   a function returning a reply string.
 
 ## ⚠ Security note
 

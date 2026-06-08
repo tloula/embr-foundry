@@ -1,13 +1,13 @@
 [project]
 name = "embr-foundry"
 version = "0.1.0"
-description = "Minimal chat app to test PaaS env var injection, with a pluggable AI backend."
+description = "Minimal chat + embeddings demo to test PaaS env var injection."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<0.116",
     "uvicorn>=0.30,<0.35",
-    "azure-ai-inference>=1.0.0b9",
+    "openai>=1.50",
 ]
 
 [build-system]

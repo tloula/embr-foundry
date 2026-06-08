@@ -1,11 +1,12 @@
-"""FastAPI app: single chat page, env-var dump, and a chat API.
+"""FastAPI app: a single chat page, a text-embeddings panel, and an env-var dump.
 
-The web layer depends only on the :class:`ChatBackend` interface; the concrete
-backend is selected via the ``CHAT_BACKEND`` environment variable.
+This is a deliberately minimal demo for validating environment-variable injection
+on the embr PaaS platform. embr injects an OpenAI-compatible Foundry endpoint and
+key, which :mod:`app.ai` turns into chat and embedding calls.
 
 NOTE: ``/api/env`` returns ALL environment variables (values included). This is
-intentionally insecure and exists only to validate env-var injection on a new
-PaaS platform. Do not deploy this to a real/production environment.
+intentionally insecure and exists only to validate env-var injection. Do not
+deploy this to a real/production environment.
 """
 
 from __future__ import annotations
@@ -18,9 +19,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from .backends import BackendError, get_backend
-from .backends.base import Message
-from .backends.embeddings import EmbeddingsBackend
+from . import ai
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -30,7 +29,7 @@ app = FastAPI(title="embr-foundry", version="0.1.0")
 class ChatRequest(BaseModel):
     message: str
     # Optional prior turns; each item is {"role": ..., "content": ...}.
-    history: list[Message] = []
+    history: list[ai.Message] = []
 
 
 class EmbedRequest(BaseModel):
@@ -47,25 +46,17 @@ def root() -> FileResponse:
 
 @app.get("/api/env")
 def list_env() -> JSONResponse:
-    """Return all environment variables.
-
-    Intentionally exposes values for platform injection testing only.
-    """
-    env = dict(sorted(os.environ.items()))
-    return JSONResponse({"backend": os.environ.get("CHAT_BACKEND", "completions"), "env": env})
+    """Return all environment variables (values included) for injection testing."""
+    return JSONResponse({"env": dict(sorted(os.environ.items()))})
 
 
 @app.post("/api/chat")
 def chat(req: ChatRequest) -> JSONResponse:
-    messages: list[Message] = [*req.history, {"role": "user", "content": req.message}]
+    messages: list[ai.Message] = [*req.history, {"role": "user", "content": req.message}]
     try:
-        backend = get_backend()
-        reply = backend.chat(messages)
-    except BackendError as exc:
+        return JSONResponse({"reply": ai.chat(messages)})
+    except Exception as exc:  # noqa: BLE001 - surface as a readable error
         return JSONResponse({"error": str(exc)}, status_code=503)
-    except NotImplementedError as exc:
-        return JSONResponse({"error": str(exc)}, status_code=501)
-    return JSONResponse({"reply": reply})
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
@@ -76,19 +67,15 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 @app.post("/api/embed")
 def embed(req: EmbedRequest) -> JSONResponse:
-    """Embed text with the configured model; optionally compare two strings.
-
-    Returns the vector dimension and a small preview so platform operators can
-    confirm the embedding model and its env-var injection actually work.
-    """
+    """Embed text with the configured model; optionally compare two strings."""
     inputs = [req.text]
     compare = (req.compare or "").strip()
     if compare:
         inputs.append(compare)
 
     try:
-        vectors = EmbeddingsBackend().embed(inputs)
-    except BackendError as exc:
+        vectors = ai.embed(inputs)
+    except Exception as exc:  # noqa: BLE001 - surface as a readable error
         return JSONResponse({"error": str(exc)}, status_code=503)
 
     primary = vectors[0]
