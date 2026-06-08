@@ -35,7 +35,7 @@ Embeddings (`azure-ai-inference` `EmbeddingsClient`) — powers the **Text embed
 
 | Var | Purpose |
 | --- | --- |
-| `EMBED_AI_ENDPOINT` | Models inference endpoint URL, ending in `/models` (same rule as `CHAT_AI_ENDPOINT`). |
+| `EMBED_AI_ENDPOINT` | Resource endpoint — use the **same** `.../models` base as `CHAT_AI_ENDPOINT`. The backend derives the Azure OpenAI embeddings route (`<resource>/openai/deployments/<model>`) from it, since AOAI embedding deployments aren't served by `/models`. A full `.../openai/deployments/<name>` URL also works. |
 | `EMBED_AI_API_KEY` | API key |
 | `EMBED_AI_MODEL` | Embedding model/deployment name (e.g. `text-embedding-3-small`) |
 | `EMBED_AI_API_VERSION` | Optional API version override (usually unnecessary). |
