@@ -4,9 +4,9 @@ This is a deliberately minimal demo for validating environment-variable injectio
 on the embr PaaS platform. embr injects an OpenAI-compatible Foundry endpoint and
 key, which :mod:`app.ai` turns into chat and embedding calls.
 
-NOTE: ``/api/env`` returns ALL environment variables (values included). This is
-intentionally insecure and exists only to validate env-var injection. Do not
-deploy this to a real/production environment.
+NOTE: ``/api/env`` returns all environment variables and masks values for names
+containing ``KEY``. This is still intentionally insecure and exists only to
+validate env-var injection. Do not deploy this to a real/production environment.
 """
 
 from __future__ import annotations
@@ -46,8 +46,14 @@ def root() -> FileResponse:
 
 @app.get("/api/env")
 def list_env() -> JSONResponse:
-    """Return all environment variables (values included) for injection testing."""
-    return JSONResponse({"env": dict(sorted(os.environ.items()))})
+    """Return all environment variables, masking values for names containing KEY."""
+    masked_env: dict[str, str] = {}
+    for name, value in sorted(os.environ.items()):
+        if "KEY" in name.upper():
+            masked_env[name] = "***MASKED***"
+        else:
+            masked_env[name] = value
+    return JSONResponse({"env": masked_env})
 
 
 @app.post("/api/chat")

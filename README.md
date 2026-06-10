@@ -79,7 +79,7 @@ The container honors a `PORT` env var if the platform injects one (defaults to `
 | Method | Path | Description |
 | --- | --- | --- |
 | GET | `/` | Chat page + env-var dump |
-| GET | `/api/env` | All env vars as JSON (testing only) |
+| GET | `/api/env` | All env vars as JSON, with values masked when var name contains `KEY` (testing only) |
 | POST | `/api/chat` | `{ "message": "...", "history": [...] }` → `{ "reply": "..." }` |
 | POST | `/api/embed` | `{ "text": "...", "compare": "..."? }` → vector `dimensions`, `norm`, `preview`, and `similarity` when `compare` is given |
 | GET | `/health` | Liveness probe |
@@ -109,9 +109,9 @@ the `openai` SDK; `app/main.py` is just the FastAPI web layer. To add a Foundry
 
 ## ⚠ Security note
 
-`/api/env` and the UI expose **all** environment variable values, including
-secrets. This is intentional for validating platform env-var injection and must
-**never** be enabled in a real environment.
+`/api/env` and the UI expose environment variable values, with masking only for
+names containing `KEY`. This is intentional for validating platform env-var
+injection and must **never** be enabled in a real environment.
 
 ## Troubleshooting: PaaS build fails with `invalid peer certificate: UnknownIssuer`
 
