@@ -14,3 +14,17 @@ healthCheck:
   expectedStatusCode: 200
 
 autoDeploy: true
+
+dependencies:
+  - name: embed
+    type: model
+    provides:
+      - name: EMBED_AI_ENDPOINT
+        secret: false
+        scope: runtime
+      - name: EMBED_AI_MODEL
+        secret: false
+        scope: runtime
+      - name: EMBED_AI_API_KEY
+        secret: true
+        scope: runtime
