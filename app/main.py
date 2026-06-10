@@ -50,7 +50,7 @@ def list_env() -> JSONResponse:
     masked_env: dict[str, str] = {}
     for name, value in sorted(os.environ.items()):
         if "KEY" in name.upper():
-            # masked_env[name] = "***MASKED***"
+            masked_env[name] = value
             pass
         else:
             masked_env[name] = value
