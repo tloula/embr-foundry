@@ -15,9 +15,6 @@ healthCheck:
 
 autoDeploy: true
 
-database:
-  enabled: true
-
 dependencies:
   - name: embed
     type: model
@@ -31,3 +28,5 @@ dependencies:
       - name: EMBED_AI_API_KEY
         secret: true
         scope: runtime
+  - name: db
+    type: postgres
