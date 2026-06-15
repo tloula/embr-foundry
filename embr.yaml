@@ -15,6 +15,9 @@ healthCheck:
 
 autoDeploy: true
 
+database:
+  enabled: true
+
 dependencies:
   - name: embed
     type: model
