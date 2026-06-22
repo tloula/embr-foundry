@@ -28,5 +28,17 @@ dependencies:
       - name: EMBED_AI_API_KEY
         secret: true
         scope: runtime
+  - name: fargo
+    type: model
+    provides:
+      - name: FARGO_AI_ENDPOINT
+        secret: false
+        scope: runtime
+      - name: FARGO_AI_MODEL
+        secret: false
+        scope: runtime
+      - name: FARGO_AI_API_KEY
+        secret: true
+        scope: runtime
   - name: db
     type: postgres
