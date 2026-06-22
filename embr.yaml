@@ -42,3 +42,4 @@ dependencies:
         scope: runtime
   - name: db
     type: postgres
+
