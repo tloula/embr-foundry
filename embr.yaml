@@ -40,6 +40,18 @@ dependencies:
       - name: FARGO_AI_API_KEY
         secret: true
         scope: runtime
+  - name: newguy
+    type: model
+    provides:
+      - name: NEWGUY_AI_ENDPOINT
+        secret: false
+        scope: runtime
+      - name: NEWGUY_AI_MODEL
+        secret: false
+        scope: runtime
+      - name: NEWGUY_AI_API_KEY
+        secret: true
+        scope: runtime
   - name: db
     type: postgres
 
