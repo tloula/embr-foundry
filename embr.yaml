@@ -52,5 +52,3 @@ dependencies:
       - name: NEWGUY_AI_API_KEY
         secret: true
         scope: runtime
-  - name: db
-    type: postgres
