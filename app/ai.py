@@ -37,8 +37,8 @@ def _client(prefix: str) -> OpenAI:
 
 def chat(messages: list[Message]) -> str:
     """Return the assistant's reply for a conversation."""
-    response = _client("CHAT_AI").chat.completions.create(
-        model=os.environ["CHAT_AI_MODEL"],
+    response = _client("NEWGUY_AI").chat.completions.create(
+        model=os.environ["NEWGUY_AI_MODEL"],
         messages=messages,
     )
     return response.choices[0].message.content or ""
