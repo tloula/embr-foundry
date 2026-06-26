@@ -44,6 +44,7 @@ def root() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+
 @app.get("/api/env")
 def list_env() -> JSONResponse:
     """Return all environment variables, masking values for names containing KEY."""
