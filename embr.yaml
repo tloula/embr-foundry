@@ -28,5 +28,3 @@ dependencies:
       - name: EMBED_AI_API_KEY
         secret: true
         scope: runtime
-  - name: db
-    type: postgres
